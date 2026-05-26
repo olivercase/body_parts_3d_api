@@ -1,0 +1,12 @@
+# Downloaded data — do not commit the meshes (CC-BY-SA, large, reproducible)
+bodyparts3d_4.3/
+*.zip
+*.obj
+_session_cookies.txt
+download.log
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
