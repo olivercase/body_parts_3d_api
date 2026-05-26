@@ -1,14 +1,12 @@
-# BodyParts3D 4.3 downloader
+# BodyParts3D 4.3 — complete, verified mesh set + downloader
 
-A small, dependency-light Python tool that downloads the **complete, full-resolution
-BodyParts3D / Anatomography version 4.3** anatomical mesh set as Wavefront `.obj`
-files — every organ, muscle, bone, blood vessel, nerve, etc. (~2,200+ element meshes).
+The **complete, full-resolution BodyParts3D / Anatomography version 4.3** anatomical
+mesh set as Wavefront `.obj` files — **3,210 element meshes** (every FMA-mapped
+organ, muscle, bone, blood vessel, nerve, cartilage, etc.), plus the small,
+dependency-light Python tool that downloads and verifies them.
 
-As far as we can tell, **there is no public bulk source for the 4.3 meshes and no
-existing tool that retrieves them** — the official downloads only offer the older,
-polygon-reduced 4.0 set, and the documented API can't return meshes at all. This
-tool gets the 4.3 geometry by driving the Anatomography web viewer's own
-(undocumented) download endpoints.
+The meshes themselves are committed here via **Git LFS** (`meshes/*.obj`), so you can
+clone the data directly — or re-fetch from source with the script.
 
 > **Data © Database Center for Life Science (DBCLS).** BodyParts3D is licensed
 > **CC-BY-SA 2.1 Japan**. You must attribute DBCLS / BodyParts3D when you
@@ -16,135 +14,119 @@ tool gets the 4.3 geometry by driving the Anatomography web viewer's own
 
 ---
 
-## Why the standard routes don't work
-
-BodyParts3D officially exposes two ways to get data. Neither yields the 4.3 meshes:
-
-### 1. The bulk archive — wrong version, reduced geometry
-The mirror at `dbarchive.biosciencedbc.jp/data/bodyparts3d/` (HTTP **and** FTP, every
-dated release, with `LATEST → 20130619`) contains **only**:
+## What's in here
 
 ```
-isa_BP3D_4.0_obj_99.zip      partof_BP3D_4.0_obj_99.zip
-isa_parts_list_e.txt         isa_element_parts.txt        (+ partof_* and relation lists)
+meshes/        3,210 × FJ…_BP…_FMA…_<name>.obj   (full-res 4.3 geometry, via Git LFS)
+metadata/
+  FMA2Obj.txt  the authoritative, version-stamped 4.3 manifest (FMA → FJ components)
+  obj2FMA.html the FJ ↔ BP (rep_id) lookup used to drive the download endpoint
+MANIFEST.csv   one row per mesh: fj_id, bp_id, fma_id, name, faces, verts, bytes, mtime
+download_bodyparts3d_4.3.py   the downloader + verifier
 ```
 
-That is **version 4.0**, and the `_99` means **99% polygon-reduced**. There is no
-4.1/4.3/5.0 archive and no full-resolution archive anywhere on the mirror. So the
-bulk route can't give you 4.3 at all.
+Every mesh in `meshes/` is a member of the 4.3 object set as declared by
+`FMA2Obj.txt` (`# Data Version 4.3 / # Objects set 4.3`), and every one has been
+loaded and validated (non-empty geometry) — see `MANIFEST.csv`.
 
-### 2. The documented Web API — renders pictures, not meshes
-The official **Anatomography Web API** (`lifesciencedb.jp/bp3d/info_en/webapi/`)
-provides exactly these methods:
+### Getting the meshes
 
-| Method          | Returns                |
-|-----------------|------------------------|
-| `API/image`     | a PNG image            |
-| `API/animation` | an animated GIF        |
-| `API/map`       | coordinate JSON        |
-| `API/focus`     | camera-parameter JSON  |
-| `API/pick`      | pick-coordinate JSON   |
+```bash
+git lfs install
+git clone git@github.com:olivercase/body_parts_3d_api.git
+# meshes/ now contains all 3,210 .obj files
+```
 
-There is **no method that returns a 3D model / OBJ file** — it is a server-side
-*rendering* API. Its `Version` parameter is also documented only up to `"4.1"`.
-So the documented API cannot return mesh geometry, in any version.
-
-### The conclusion
-The full-resolution **4.3** meshes live only inside the interactive viewer at
-`lifesciencedb.jp/bp3d`. The viewer downloads them through two **undocumented** CGI
-endpoints (the same ones its "download selected parts" button uses). This tool
-reverse-engineers and drives those endpoints to fetch the whole set headlessly.
+(Without Git LFS the `.obj` files clone as small pointer text files; run
+`git lfs pull` after installing LFS.)
 
 ---
 
-## How it works (the undocumented two-step API)
+## Why the standard routes don't give you 4.3
 
-Identifiers: `FMA…` = Foundational Model of Anatomy concept id · `BP…` = BodyParts3D
-representation/concept id · `FJ…` = element-file id (one `.obj` per `FJ`).
+BodyParts3D officially exposes two ways to get data; neither yields the 4.3 meshes:
 
-**Step 1 — expand a concept into its element files.** POST to
-`download-pallet-art_file.cgi`. The `rep_ids` field is a **JSON array of objects**
-(sending plain strings fails with `Can't use string as a HASH ref`):
+1. **The bulk archive** at `dbarchive.biosciencedbc.jp/data/bodyparts3d/` ships only
+   `isa_BP3D_4.0_obj_99.zip` — i.e. version **4.0**, **99% polygon-reduced**. No
+   4.1/4.3/5.0 archive, no full-resolution archive.
+2. **The documented Web API** (`lifesciencedb.jp/bp3d/info_en/webapi/`) renders
+   *images*, not meshes.
 
-```bash
-curl -s 'https://lifesciencedb.jp/bp3d/download-pallet-art_file.cgi' \
-  --data-urlencode 'rep_ids=[{"rep_id":"BP22970","opacity":1,"exclude":false}]'
-# → {"art_ids":["FJ4039","FJ1381","FJ3981"],"rep_ids":["BP23034","BP23210"],"success":true}
+So the 4.3 geometry is only obtainable by driving the Anatomography viewer's own
+(undocumented) endpoints, which is what this tool does.
+
+---
+
+## How it works (the correctness-critical part: getting the version right)
+
+The hard problem is not downloading a mesh — it's knowing the download is **4.3** and
+nothing else. Three facts make that subtle:
+
+- **`obj2FMA` (`upload-all-list`) ignores its `version` parameter.** Requesting it for
+  `version=4.0` vs `version=4.3` returns byte-identical output — a 13,312-row master
+  *superset* spanning all versions (it also includes non-canonical `MM`/`CX` series).
+  It is **not** a version-specific list; use it only for the FJ→BP lookup.
+- **The `download.cgi` endpoint ignores `mv_id`/`version` too.** A given `FJ…`
+  element id deterministically maps to exactly one full-resolution geometry file.
+  The version is therefore fixed by **which FJ ids you ask for**, not by any flag.
+- **File modification dates are not version markers.** Many 4.3 meshes carry
+  2011–2013 modeling timestamps; 4.3 simply reuses unchanged geometry for parts that
+  weren't re-modeled. Membership in the 4.3 manifest — not the date — is what makes a
+  mesh "4.3".
+
+**The authoritative 4.3 manifest** is therefore the linchpin:
+
+```
+GET get-info.cgi?version=4.3&cmd=concept-objfiles-list   →  ZIP containing FMA2Obj.txt
 ```
 
-**Step 2 — download the paired ids as a ZIP of OBJs.** POST to `download.cgi`:
+whose header is explicitly version-stamped:
 
-```bash
-curl -s -o out.zip 'https://lifesciencedb.jp/bp3d/download.cgi' \
-  --data-urlencode 'rep_id=["BP23034","BP23210"]' \
-  --data-urlencode 'ids=["FJ4039","FJ1381","FJ3981"]' \
-  --data-urlencode 'filename=out' \
-  --data-urlencode 'type=art_file' \
-  --data-urlencode 'all_downloads=1'
-# → application/zip containing e.g. FJ4039_BP23210_FMA50881_Right trochlear nerve.obj
-#   (file timestamps are 2014-03, i.e. the 4.3 build)
+```
+# Data Version  4.3
+# Objects set   4.3
+# Tree version  FMA3.0
+# FMA ID   is_a/part_of   model component
+FMA10014   is_a   FJ3175
+FMA10446   is_a   FJ3202+FJ3203+…
 ```
 
-The complete list of concept ids to feed Step 1 comes from the authoritative
-`isa_parts_list_e.txt` (downloaded automatically from the dbarchive mirror — that
-metadata *is* published, just not the 4.3 geometry). The script batches concepts,
-runs Step 1 → Step 2 per batch, then unzips everything into a flat, de-duplicated
-`objs/` folder.
+The set of `FJ…` "model component" ids in that file **is** the version-4.3 object set
+(3,210 unique FJ). The tool:
+
+1. Fetches `FMA2Obj.txt` (the 4.3 FJ universe) and `obj2FMA` (FJ → BP `rep_id`).
+2. Batches the FJ ids to `download.cgi`
+   (`ids=[FJ…]&rep_id=[BP…]&type=art_file&all_downloads=1`), which returns a ZIP of
+   `FJ…_BP…_FMA…_<name>.obj`.
+3. Extracts **only** in-manifest FJ (a batch can return sibling elements), deduped.
+4. **Verifies**: confirms all 3,210 manifest FJ are present, loads each in `trimesh`,
+   and writes `MANIFEST.csv`.
+
+> An earlier approach seeded concept ids from the dbarchive `isa_parts_list_e.txt` —
+> that's the **4.0** parts list, which is both incomplete for 4.3 and
+> version-ambiguous. This tool does not use it.
 
 ---
 
 ## Usage
 
-Requirements: **Python 3.9+** and **`curl`** on your `PATH`. No third-party Python
-packages.
-
 ```bash
-python3 download_bodyparts3d.py                 # full run → ./bodyparts3d_4.3/objs/
-python3 download_bodyparts3d.py --limit 80      # smoke test: first 80 concepts
-python3 download_bodyparts3d.py --chunk-size 40 # concepts per request batch
-python3 download_bodyparts3d.py --no-extract    # download zips only
-python3 download_bodyparts3d.py --extract-only  # just (re)unzip existing chunks
+pip install trimesh                # only needed for the verify step
+python3 download_bodyparts3d_4.3.py                 # full fresh run + verify
+python3 download_bodyparts3d_4.3.py --limit 80      # smoke test (first N FJ)
+python3 download_bodyparts3d_4.3.py --chunk-size 50 # tune batch size
+python3 download_bodyparts3d_4.3.py --verify-only   # re-verify an existing meshes set
 ```
 
-Output layout:
-
-```
-bodyparts3d_4.3/
-├── metadata/   isa_parts_list_e.txt, isa_element_parts.txt   (id ↔ FMA ↔ name maps)
-├── chunks/     chunk_0000.zip, chunk_0001.zip, …             (raw downloads, resumable)
-├── objs/       FJ…_BP…_FMA…_<name>.obj                       (final, deduped, flat)
-└── download.log
-```
-
-The run is **resumable**: any chunk whose `.zip` already exists and unzips cleanly is
-skipped, so an interrupted run costs nothing. Requests are sequential with a small
-delay and automatic retries/backoff.
-
-### Filename convention
-Each mesh is named `FJ<file>_BP<rep>_FMA<concept>_<human readable name>.obj`, so you
-can map any mesh back to its FMA concept and walk the FMA/BodyParts3D hierarchy using
-the files in `metadata/` (`isa_element_parts.txt` links `FMA → name → FJ`).
+Output goes under `data/bodyparts3d/raw_4.3/` by default (`--out` to change):
+`metadata/`, `chunks/` (raw zips, resumable), `objs/` (flat deduped meshes),
+`MANIFEST.csv`, `download.log`. The run is resumable (a valid chunk zip is skipped)
+and polite (sequential requests, small delay, retries with backoff).
 
 ---
 
-## Please be a good citizen
+## Attribution
 
-These endpoints are an undocumented part of a public research service run by DBCLS.
-Keep the default polite settings (sequential requests, delay, retries), don't
-parallelise aggressively, and don't re-hammer the server once you have the data —
-the full set is only a few hundred MB and downloads once. Respect the
-[BodyParts3D license](https://dbarchive.biosciencedbc.jp/en/bodyparts3d/lic.html)
-and cite DBCLS.
-
-## Attribution / citation
-
-> BodyParts3D, © The Database Center for Life Science (DBCLS), licensed under
-> CC Attribution-Share Alike 2.1 Japan.
-> Mitsuhashi N, Fujieda K, Tamura T, Kawamoto S, Takagi T, Okubo K. *BodyParts3D:
-> 3D structure database for anatomical concepts.* Nucleic Acids Res. 2009.
-
-## Links
-- Viewer: https://lifesciencedb.jp/bp3d/?lng=en
-- Documented (image-only) Web API: https://lifesciencedb.jp/bp3d/info_en/webapi/
-- Official bulk archive (4.0 only): https://dbarchive.biosciencedbc.jp/en/bodyparts3d/download.html
-- License: https://dbarchive.biosciencedbc.jp/en/bodyparts3d/lic.html
+BodyParts3D, © Database Center for Life Science (DBCLS), licensed CC-BY-SA 2.1 Japan.
+If you use or redistribute the meshes, cite BodyParts3D / DBCLS and preserve the
+share-alike license. Repository code is MIT-licensed.

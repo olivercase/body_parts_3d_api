@@ -1,9 +1,11 @@
-# Downloaded data — do not commit the meshes (CC-BY-SA, large, reproducible)
-bodyparts3d_4.3/
+# Raw download artifacts — reproducible, not committed
+chunks/
 *.zip
-*.obj
 _session_cookies.txt
 download.log
+_quarantine_*/
+
+# Note: meshes/*.obj ARE committed, via Git LFS (see .gitattributes)
 
 # Python
 __pycache__/
