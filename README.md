@@ -1,5 +1,10 @@
 # BodyParts3D 4.3 — complete, verified mesh set, downloader and subset selector
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22727173.svg)](https://doi.org/10.5281/zenodo.22727173)
+[![CI](https://github.com/olivercase/body_parts_3d_api/actions/workflows/ci.yml/badge.svg)](https://github.com/olivercase/body_parts_3d_api/actions/workflows/ci.yml)
+[![Code licence: MIT](https://img.shields.io/badge/code%20licence-MIT-blue.svg)](LICENSE)
+[![Data licence: CC BY-SA 2.1 JP](https://img.shields.io/badge/data%20licence-CC%20BY--SA%202.1%20JP-lightgrey.svg)](https://creativecommons.org/licenses/by-sa/2.1/jp/)
+
 The **complete, full-resolution BodyParts3D / Anatomography version 4.3** anatomical
 mesh set as Wavefront `.obj` files — **3,210 element meshes** (every FMA-mapped
 organ, muscle, bone, blood vessel, nerve, cartilage, etc.), plus the small,
@@ -193,9 +198,17 @@ they run on a `GIT_LFS_SKIP_SMUDGE=1` clone, which is what CI does.
 
 ## Citation
 
-If you use this, cite the software (`CITATION.cff`, or the Zenodo DOI on the release)
-**and** BodyParts3D/DBCLS for the anatomical data. The two are separate: the code here
-is MIT, the meshes are CC BY-SA 2.1 Japan.
+If you use this, cite the software **and** BodyParts3D/DBCLS for the anatomical data.
+The two are separate: the code here is MIT, the meshes are CC BY-SA 2.1 Japan.
+
+The software has a DOI that always resolves to the latest release:
+
+> Case, O. *BodyParts3D 4.3: complete verified mesh set, downloader and subset
+> selector*. Zenodo. https://doi.org/10.5281/zenodo.22727173
+
+`CITATION.cff` carries the same in machine-readable form — GitHub's "Cite this
+repository" button reads it. To cite one specific version, use that release's own DOI
+from the [Zenodo record](https://doi.org/10.5281/zenodo.22727173) rather than the one above.
 
 ---
 
