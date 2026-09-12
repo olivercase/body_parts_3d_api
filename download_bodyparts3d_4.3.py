@@ -56,6 +56,7 @@ Usage::
     python3 scripts/download_bodyparts3d_4.3.py --chunk-size 50 # tune batch size
     python3 scripts/download_bodyparts3d_4.3.py --verify-only    # re-verify existing objs/
 """
+
 from __future__ import annotations
 
 import argparse
@@ -76,8 +77,10 @@ VIEWER = f"{BASE}/?lng=en"
 INFO_CGI = f"{BASE}/get-info.cgi"
 DOWNLOAD_CGI = f"{BASE}/download.cgi"
 VERSION = "4.3"
-UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
-      "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
+UA = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+)
 
 logger = logging.getLogger("bp3d_dl")
 
@@ -90,19 +93,37 @@ def _curl(args: list[str], *, retries: int = 4, timeout: int = 300) -> bytes:
             p = subprocess.run(args, capture_output=True, timeout=timeout)
             if p.returncode == 0:
                 return p.stdout
-            last_err = RuntimeError(f"curl rc={p.returncode}: {p.stderr.decode(errors='replace')[:200]}")
+            last_err = RuntimeError(
+                f"curl rc={p.returncode}: {p.stderr.decode(errors='replace')[:200]}"
+            )
         except subprocess.TimeoutExpired as e:
             last_err = e
-        wait = 2 ** attempt
-        logger.warning("  request failed (attempt %d/%d): %s -- retrying in %ds",
-                       attempt, retries, last_err, wait)
+        wait = 2**attempt
+        logger.warning(
+            "  request failed (attempt %d/%d): %s -- retrying in %ds",
+            attempt,
+            retries,
+            last_err,
+            wait,
+        )
         time.sleep(wait)
     raise RuntimeError(f"curl failed after {retries} attempts: {last_err}")
 
 
 def _base_curl(cookies: Path) -> list[str]:
-    return ["curl", "-A", UA, "-e", VIEWER, "-b", str(cookies), "-c", str(cookies),
-            "-s", "--compressed"]
+    return [
+        "curl",
+        "-A",
+        UA,
+        "-e",
+        VIEWER,
+        "-b",
+        str(cookies),
+        "-c",
+        str(cookies),
+        "-s",
+        "--compressed",
+    ]
 
 
 def get_session(cookies: Path) -> None:
@@ -117,7 +138,7 @@ def fetch_fma2obj(meta_dir: Path, cookies: Path) -> Path:
     if dst.exists() and dst.stat().st_size > 0:
         return dst
     logger.info("fetching 4.3 manifest (concept-objfiles-list)")
-    blob = _curl(_base_curl(cookies) + [f"{INFO_CGI}?version={VERSION}&cmd=concept-objfiles-list"])
+    blob = _curl([*_base_curl(cookies), f"{INFO_CGI}?version={VERSION}&cmd=concept-objfiles-list"])
     with zipfile.ZipFile(io.BytesIO(blob)) as z:
         name = next(n for n in z.namelist() if n.endswith(".txt"))
         dst.write_bytes(z.read(name))
@@ -129,16 +150,26 @@ def fetch_obj2fma(meta_dir: Path, cookies: Path) -> Path:
     if dst.exists() and dst.stat().st_size > 0:
         return dst
     logger.info("fetching FJ<->BP map (obj2FMA upload-all-list)")
-    blob = _curl(_base_curl(cookies) + [
-        "-X", "POST",
-        "--data-urlencode", "cmd=upload-all-list",
-        "--data-urlencode", "load=1",
-        "--data-urlencode", "md_abbr=bp3d",
-        "--data-urlencode", "title=obj2FMA",
-        "--data-urlencode", "tree=isa",
-        "--data-urlencode", f"version={VERSION}",
-        INFO_CGI,
-    ])
+    blob = _curl(
+        [
+            *_base_curl(cookies),
+            "-X",
+            "POST",
+            "--data-urlencode",
+            "cmd=upload-all-list",
+            "--data-urlencode",
+            "load=1",
+            "--data-urlencode",
+            "md_abbr=bp3d",
+            "--data-urlencode",
+            "title=obj2FMA",
+            "--data-urlencode",
+            "tree=isa",
+            "--data-urlencode",
+            f"version={VERSION}",
+            INFO_CGI,
+        ]
+    )
     dst.write_bytes(blob)
     return dst
 
@@ -174,13 +205,20 @@ def parse_fj2bp(obj2fma_html: Path) -> dict[str, str]:
 
 # -- download -----------------------------------------------------------------
 def download_zip(fj_ids: list[str], bp_ids: list[str], dst: Path, cookies: Path) -> None:
-    args = _base_curl(cookies) + [
-        "-o", str(dst),
-        "--data-urlencode", f"ids={json.dumps(fj_ids)}",
-        "--data-urlencode", f"rep_id={json.dumps(bp_ids)}",
-        "--data-urlencode", f"filename={dst.stem}",
-        "--data-urlencode", "type=art_file",
-        "--data-urlencode", "all_downloads=1",
+    args = [
+        *_base_curl(cookies),
+        "-o",
+        str(dst),
+        "--data-urlencode",
+        f"ids={json.dumps(fj_ids)}",
+        "--data-urlencode",
+        f"rep_id={json.dumps(bp_ids)}",
+        "--data-urlencode",
+        f"filename={dst.stem}",
+        "--data-urlencode",
+        "type=art_file",
+        "--data-urlencode",
+        "all_downloads=1",
         DOWNLOAD_CGI,
     ]
     _curl(args, timeout=600)
@@ -212,13 +250,16 @@ def run(out: Path, *, chunk_size: int, limit: int | None, delay: float) -> None:
 
     missing_bp = [fj for fj in target if fj not in fj2bp]
     if missing_bp:
-        logger.warning("%d/%d target FJ have no BP id in obj2FMA (cannot download): %s",
-                       len(missing_bp), len(target), missing_bp[:10])
+        logger.warning(
+            "%d/%d target FJ have no BP id in obj2FMA (cannot download): %s",
+            len(missing_bp),
+            len(target),
+            missing_bp[:10],
+        )
     target = [fj for fj in target if fj in fj2bp]
-    logger.info("authoritative 4.3 object set: %d FJ (downloadable: %d)",
-                len(fj2fma), len(target))
+    logger.info("authoritative 4.3 object set: %d FJ (downloadable: %d)", len(fj2fma), len(target))
 
-    chunks = [target[i:i + chunk_size] for i in range(0, len(target), chunk_size)]
+    chunks = [target[i : i + chunk_size] for i in range(0, len(target), chunk_size)]
     logger.info("%d FJ -> %d chunks of %d", len(target), len(chunks), chunk_size)
 
     n_skip = n_done = n_fail = 0
@@ -235,8 +276,14 @@ def run(out: Path, *, chunk_size: int, limit: int | None, delay: float) -> None:
             with zipfile.ZipFile(zpath) as z:
                 n_obj = sum(1 for n in z.namelist() if n.lower().endswith(".obj"))
             n_done += 1
-            logger.info("chunk %04d/%d: %d FJ -> %d OBJ (%.1f MB)",
-                        ci, len(chunks), len(chunk), n_obj, zpath.stat().st_size / 1e6)
+            logger.info(
+                "chunk %04d/%d: %d FJ -> %d OBJ (%.1f MB)",
+                ci,
+                len(chunks),
+                len(chunk),
+                n_obj,
+                zpath.stat().st_size / 1e6,
+            )
         except Exception as e:
             n_fail += 1
             logger.error("chunk %04d FAILED: %s", ci, e)
@@ -304,27 +351,50 @@ def verify(out: Path) -> int:
         except Exception as e:
             bad.append((fj, str(e)[:80]))
             faces = verts = -1
-        name = path.name.split("_", 3)[-1].rsplit(".obj", 1)[0] if path.name.count("_") >= 3 else path.stem
-        rows.append({
-            "fj_id": fj, "bp_id": fj2bp.get(fj, ""), "fma_id": fj2fma[fj],
-            "name": name, "faces": faces, "verts": verts,
-            "bytes": path.stat().st_size, "mtime": int(path.stat().st_mtime),
-        })
+        name = (
+            path.name.split("_", 3)[-1].rsplit(".obj", 1)[0]
+            if path.name.count("_") >= 3
+            else path.stem
+        )
+        rows.append(
+            {
+                "fj_id": fj,
+                "bp_id": fj2bp.get(fj, ""),
+                "fma_id": fj2fma[fj],
+                "name": name,
+                "faces": faces,
+                "verts": verts,
+                "bytes": path.stat().st_size,
+                "mtime": int(path.stat().st_mtime),
+            }
+        )
 
     missing = sorted(set(fj2fma) - set(have))
     extras = sorted(set(have) - set(fj2fma))
 
     csv_path = out / "MANIFEST.csv"
     with csv_path.open("w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=["fj_id", "bp_id", "fma_id", "name", "faces", "verts", "bytes", "mtime"])
+        w = csv.DictWriter(
+            f, fieldnames=["fj_id", "bp_id", "fma_id", "name", "faces", "verts", "bytes", "mtime"]
+        )
         w.writeheader()
         w.writerows(rows)
 
-    logger.info("VERIFY: manifest=%d  present=%d  missing=%d  extras(not in 4.3)=%d  bad=%d",
-                len(fj2fma), len(rows), len(missing), len(extras), len(bad))
+    logger.info(
+        "VERIFY: manifest=%d  present=%d  missing=%d  extras(not in 4.3)=%d  bad=%d",
+        len(fj2fma),
+        len(rows),
+        len(missing),
+        len(extras),
+        len(bad),
+    )
     if missing:
-        logger.warning("  missing FJ (%d): %s%s", len(missing), missing[:15],
-                        " ..." if len(missing) > 15 else "")
+        logger.warning(
+            "  missing FJ (%d): %s%s",
+            len(missing),
+            missing[:15],
+            " ..." if len(missing) > 15 else "",
+        )
     if bad:
         logger.warning("  unloadable/empty OBJ (%d): %s", len(bad), bad[:10])
     logger.info("  wrote %s (%d rows)", csv_path, len(rows))
@@ -332,19 +402,27 @@ def verify(out: Path) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("--out", type=Path, default=Path("data/bodyparts3d/raw_4.3"))
     ap.add_argument("--chunk-size", type=int, default=50, help="FJ ids per request batch")
     ap.add_argument("--limit", type=int, default=None, help="only the first N FJ (smoke test)")
     ap.add_argument("--delay", type=float, default=0.5, help="seconds between requests (be polite)")
-    ap.add_argument("--verify-only", action="store_true", help="skip download; just verify existing objs/")
+    ap.add_argument(
+        "--verify-only", action="store_true", help="skip download; just verify existing objs/"
+    )
     args = ap.parse_args(argv)
 
     args.out.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s %(levelname)-7s %(message)s", datefmt="%H:%M:%S",
-        handlers=[logging.StreamHandler(sys.stdout),
-                  logging.FileHandler(args.out / "download.log")],
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)-7s %(message)s",
+        datefmt="%H:%M:%S",
+        handlers=[
+            logging.StreamHandler(sys.stdout),
+            logging.FileHandler(args.out / "download.log"),
+        ],
     )
 
     if args.verify_only:
