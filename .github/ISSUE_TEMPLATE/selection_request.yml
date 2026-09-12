@@ -1,0 +1,31 @@
+name: Anatomy or selection request
+description: Ask for a new built-in group, or a correction to an existing one
+labels: ["anatomy"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A group in `bp3d_subset.py` is a claim about what a structure consists of,
+        so it needs naming, not just wanting. `python3 bp3d_subset.py --list` shows
+        what the current groups resolve to.
+  - type: input
+    id: structure
+    attributes:
+      label: Which structure
+      placeholder: "Kidneys / liver / upper-limb muscle / cranial nerve X"
+    validations:
+      required: true
+  - type: textarea
+    id: elements
+    attributes:
+      label: Which BodyParts3D elements make it up
+      description: >-
+        FMA names or FJ ids from MANIFEST.csv. Version 4.3 often has no single mesh
+        for a whole organ, so please say which parts together constitute it.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: What you need it for
+      description: Helps judge whether this belongs as a built-in group or as a `--pattern` you run yourself.
