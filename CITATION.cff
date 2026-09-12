@@ -7,7 +7,14 @@ authors:
     family-names: Case
     orcid: "https://orcid.org/0009-0007-4499-0682"
     affiliation: "UCL Centre for Neurocardiology, Institute of Cardiovascular Science, University College London, London, United Kingdom"
-doi: "10.5281/zenodo.22727173"
+doi: "10.5281/zenodo.22727172"
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.22727172"
+    description: "Concept DOI — always resolves to the latest release"
+  - type: doi
+    value: "10.5281/zenodo.22727173"
+    description: "Version DOI for v1.0.0"
 repository-code: "https://github.com/olivercase/body_parts_3d_api"
 license: MIT
 version: "1.0.0"
