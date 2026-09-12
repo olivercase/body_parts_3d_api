@@ -12,3 +12,6 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+
+# Subsets produced by bp3d_subset.py
+subset/

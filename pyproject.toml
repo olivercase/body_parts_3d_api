@@ -1,0 +1,28 @@
+[project]
+name = "body-parts-3d-api"
+version = "1.0.0"
+description = "Complete, verified BodyParts3D 4.3 mesh set, with a downloader and a subset selector"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+authors = [{ name = "Oliver Case" }]
+keywords = ["bodyparts3d", "anatomography", "anatomy", "mesh", "fma", "dbcls"]
+dependencies = ["trimesh>=4.0"]
+
+[project.urls]
+Homepage = "https://github.com/olivercase/body_parts_3d_api"
+Source = "https://github.com/olivercase/body_parts_3d_api"
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.6"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM", "RUF"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

@@ -1,0 +1,38 @@
+{
+  "title": "BodyParts3D 4.3: complete verified mesh set, downloader and subset selector",
+  "description": "<p>Tools for obtaining the full-resolution BodyParts3D / Anatomography version 4.3 anatomical mesh set, which no published archive or documented Web API distributes: the bulk archive ships only the 99%-polygon-reduced version 4.0, and the documented Web API returns rendered images rather than geometry.</p><p>A downloader drives the Anatomography viewer's own endpoints and pins the result to version 4.3 by seeding it from the version-stamped 4.3 manifest, then verifies that every declared element is present and loadable. A subset selector takes named groups of elements by regular expression over their Foundational Model of Anatomy names, so a whole organ can be requested even where version 4.3 supplies it only in parts &mdash; the cerebrum as gyri, the lung as bronchopulmonary segments, the heart as chamber walls. The verified 3,210-mesh set is included.</p><p><strong>Data attribution:</strong> the anatomical meshes are BodyParts3D, &copy; Database Center for Life Science (DBCLS), licensed CC BY-SA 2.1 Japan. This repository's code is MIT-licensed.</p>",
+  "upload_type": "software",
+  "license": "MIT",
+  "access_right": "open",
+  "version": "1.0.0",
+  "language": "eng",
+  "creators": [
+    {
+      "name": "Case, Oliver",
+      "orcid": "0009-0007-4499-0682",
+      "affiliation": "UCL Centre for Neurocardiology, Institute of Cardiovascular Science, University College London, London, United Kingdom"
+    }
+  ],
+  "keywords": [
+    "BodyParts3D",
+    "Anatomography",
+    "anatomy",
+    "triangulated surface mesh",
+    "Foundational Model of Anatomy",
+    "DBCLS",
+    "3D model"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://lifesciencedb.jp/bp3d/",
+      "relation": "isDerivedFrom",
+      "resource_type": "dataset",
+      "scheme": "url"
+    },
+    {
+      "identifier": "https://github.com/olivercase/body_parts_3d_api",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    }
+  ]
+}

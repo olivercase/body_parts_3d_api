@@ -1,0 +1,42 @@
+cff-version: 1.2.0
+title: "BodyParts3D 4.3: complete verified mesh set, downloader and subset selector"
+message: "If you use this software or the mesh set it assembles, please cite it, and cite BodyParts3D/DBCLS for the underlying anatomical data."
+type: software
+authors:
+  - given-names: Oliver
+    family-names: Case
+    orcid: "https://orcid.org/0009-0007-4499-0682"
+    affiliation: "UCL Centre for Neurocardiology, Institute of Cardiovascular Science, University College London, London, United Kingdom"
+repository-code: "https://github.com/olivercase/body_parts_3d_api"
+license: MIT
+version: "1.0.0"
+date-released: "2026-09-12"
+keywords:
+  - BodyParts3D
+  - Anatomography
+  - anatomy
+  - triangulated surface mesh
+  - Foundational Model of Anatomy
+  - DBCLS
+abstract: >-
+  Tools for obtaining the full-resolution BodyParts3D / Anatomography version
+  4.3 anatomical mesh set, which no published archive or documented Web API
+  distributes: the bulk archive ships only the 99% polygon-reduced version 4.0,
+  and the documented API returns rendered images rather than geometry. A
+  downloader drives the Anatomography viewer's own endpoints and pins the
+  result to version 4.3 by seeding it from the version-stamped 4.3 manifest,
+  then verifies that every declared element is present and loadable. A subset
+  selector takes named groups of elements by regular expression over their
+  Foundational Model of Anatomy names, so that a whole organ can be requested
+  even where version 4.3 supplies it only in parts - the cerebrum as gyri, the
+  lung as bronchopulmonary segments, the heart as chamber walls. The verified
+  3,210-mesh set is included.
+references:
+  - type: database
+    title: "BodyParts3D/Anatomography"
+    version: "4.3"
+    authors:
+      - name: "Database Center for Life Science (DBCLS)"
+    license: CC-BY-SA-2.1-JP
+    url: "https://lifesciencedb.jp/bp3d/"
+    notes: "Anatomical mesh data. Licensed CC BY-SA 2.1 Japan; attribution and share-alike apply to the meshes, not to this repository's code."

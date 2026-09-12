@@ -1,4 +1,4 @@
-# BodyParts3D 4.3 — complete, verified mesh set + downloader
+# BodyParts3D 4.3 — complete, verified mesh set, downloader and subset selector
 
 The **complete, full-resolution BodyParts3D / Anatomography version 4.3** anatomical
 mesh set as Wavefront `.obj` files — **3,210 element meshes** (every FMA-mapped
@@ -6,7 +6,9 @@ organ, muscle, bone, blood vessel, nerve, cartilage, etc.), plus the small,
 dependency-light Python tool that downloads and verifies them.
 
 The meshes themselves are committed here via **Git LFS** (`meshes/*.obj`), so you can
-clone the data directly — or re-fetch from source with the script.
+clone the data directly — or re-fetch from source with the script. A second tool,
+`bp3d_subset.py`, pulls out just the structures you actually want (a brain, a gut, a
+pair of lungs) instead of all 3,210.
 
 > **Data © Database Center for Life Science (DBCLS).** BodyParts3D is licensed
 > **CC-BY-SA 2.1 Japan**. You must attribute DBCLS / BodyParts3D when you
@@ -23,6 +25,8 @@ metadata/
   obj2FMA.html the FJ ↔ BP (rep_id) lookup used to drive the download endpoint
 MANIFEST.csv   one row per mesh: fj_id, bp_id, fma_id, name, faces, verts, bytes, mtime
 download_bodyparts3d_4.3.py   the downloader + verifier
+bp3d_subset.py                select a named subset (see below)
+tests/                        unit tests for the selector (no network, no meshes)
 ```
 
 Every mesh in `meshes/` is a member of the 4.3 object set as declared by
@@ -122,6 +126,76 @@ Output goes under `data/bodyparts3d/raw_4.3/` by default (`--out` to change):
 `metadata/`, `chunks/` (raw zips, resumable), `objs/` (flat deduped meshes),
 `MANIFEST.csv`, `download.log`. The run is resumable (a valid chunk zip is skipped)
 and polite (sequential requests, small delay, retries with backoff).
+
+---
+
+## Selecting a subset
+
+Most of the time you do not want 3,210 meshes — you want a brain, a gut and a pair of
+lungs. `bp3d_subset.py` selects by regular expression over the FMA name each element
+carries in `MANIFEST.csv`, and either copies those meshes out of the set in this
+repository or fetches only those from source.
+
+```bash
+python3 bp3d_subset.py --list                         # what each group selects
+python3 bp3d_subset.py --group heart --group lungs --out subset
+python3 bp3d_subset.py --out subset                   # every built-in group
+python3 bp3d_subset.py --group gut --download --out subset   # fetch, don't copy
+python3 bp3d_subset.py --pattern '^(left|right) .*gyrus$' --name gyri --out subset
+```
+
+Output is `subset/<group>/*.obj` plus a `subset/MANIFEST.csv` recording group, FJ/BP/FMA
+ids, name, path and size — written from what actually landed on disk, so it cannot
+claim geometry that was never obtained.
+
+### Built-in groups
+
+| group | meshes | what it means |
+|---|---:|---|
+| `brain` | 64 | cerebral gyri + occipital lobes, thalamus, insula, hippocampus, cerebellum, pons, medulla |
+| `spine` | 24 | cervical, thoracic and lumbar vertebrae, sacrum, coccyx |
+| `spinal_cord` | 1 | neural tissue of the spinal cord |
+| `vagus_nerve` | 2 | trunk of the left and right vagus |
+| `heart` | 3 | ventricular wall, left and right atrial walls |
+| `lungs` | 18 | parenchyma, one mesh per bronchopulmonary segment |
+| `gut` | 61 | stomach, duodenum, jejunum, ileum, colon, rectum |
+| `blood_vessel` | 12 | aorta, venae cavae, pulmonary trunk, carotids, jugulars |
+| `leg_muscle` | 36 | gluteal, quadriceps, hamstring, calf and shin muscles |
+| `skin` | 1 | whole-body skin surface |
+
+A group is usually several elements, because 4.3 often has no single mesh for a whole
+organ: the cerebrum is supplied as gyri, the lung per bronchopulmonary segment, the
+heart as chamber walls. `--list` prints exactly which elements a group resolves to
+before anything is written, and the patterns themselves are in `GROUPS` at the top of
+the script — a group is meant to be auditable, not magic.
+
+> Two catalogue concepts (`FJ1791`/`FJ1792`, left and right occipital lobe) are
+> grouping nodes with no geometry of their own and are not in the 4.3 object set; the
+> `brain` group covers that territory through the lateral occipital and lingual gyri.
+
+---
+
+## Development
+
+```bash
+pip install -e ".[dev]"
+make lint    # ruff check + ruff format --check
+make test    # pytest
+make ci      # both
+```
+
+The tests cover the selector's decision-making — pattern matching, de-duplication,
+manifest validation, and a guard that every built-in group still resolves to the
+number of meshes documented above. They need neither the network nor the meshes, so
+they run on a `GIT_LFS_SKIP_SMUDGE=1` clone, which is what CI does.
+
+---
+
+## Citation
+
+If you use this, cite the software (`CITATION.cff`, or the Zenodo DOI on the release)
+**and** BodyParts3D/DBCLS for the anatomical data. The two are separate: the code here
+is MIT, the meshes are CC BY-SA 2.1 Japan.
 
 ---
 
