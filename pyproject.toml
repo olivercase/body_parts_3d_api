@@ -26,3 +26,8 @@ select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM", "RUF"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+# The tools are single-file modules at the repository root, not an installed
+# package. `python -m pytest` puts the root on sys.path and the `pytest`
+# console script does not, so without this the suite passes locally and fails
+# in CI -- which is exactly what happened.
+pythonpath = ["."]
